@@ -38,7 +38,7 @@
         body: JSON.stringify({ password: pw })
       });
       const d = await r.json().catch(() => ({}));
-      if (r.ok) { location.href = location.pathname || "/"; }
+      if (r.ok) { location.href = "/"; }
       else { $("msg").textContent = d.error || "验证失败"; $("go").disabled = false; }
     } catch (e) { $("msg").textContent = "网络错误"; $("go").disabled = false; }
   }

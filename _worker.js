@@ -333,6 +333,11 @@ export default {
     const user = await getUserAuth(request, env);
     if (!user) return serveFile(request, env, "/auth/login/");
 
+    // 已完全认证：认证页一律跳回首页（避免停留在门禁/登录页）
+    if (path === "/auth/gate" || path === "/auth/gate/" || path === "/auth/login" || path === "/auth/login/") {
+      return Response.redirect(new URL("/", request.url).toString(), 302);
+    }
+
     // 已完全认证：提供原始静态资源
     return serveAsset(request, env);
   },
