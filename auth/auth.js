@@ -24,9 +24,14 @@
       bar.appendChild(a);
     }
     const out = el("a", null, "退出");
-    out.href = "/auth/login/";
+    out.href = "javascript:void(0)";
     out.style.color = "#94a3b8";
     out.style.textDecoration = "none";
+    out.addEventListener("click", async function () {
+      out.textContent = "退出中…";
+      try { await fetch("/api/user/logout", { method: "POST" }); } catch (e) {}
+      location.href = "/";
+    });
     bar.appendChild(out);
     document.body.appendChild(bar);
   }
