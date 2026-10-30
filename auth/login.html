@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>用户登录 / 注册</title>
+<style>
+  :root { --bg:#0f172a; --card:#1e293b; --fg:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --danger:#f87171; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+         background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif; }
+  .card { background:var(--card); padding:28px 26px; border-radius:16px; width:380px; box-shadow:0 10px 40px rgba(0,0,0,.4); }
+  h1 { font-size:18px; margin:0 0 4px; }
+  .sub { color:var(--muted); font-size:13px; margin:0 0 18px; }
+  label { display:block; font-size:13px; color:var(--muted); margin:12px 0 4px; }
+  input { width:100%; padding:10px 12px; border-radius:10px; border:1px solid #334155; background:#0f172a; color:var(--fg); font-size:15px; }
+  .row { display:flex; gap:10px; }
+  .row button { flex:1; }
+  button { margin-top:14px; padding:11px; border:0; border-radius:10px; background:var(--accent); color:#04263a; font-weight:600; font-size:15px; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--accent); border:1px solid #334155; }
+  button.danger { background:var(--danger); color:#3b0a0a; }
+  .msg { min-height:18px; margin-top:12px; font-size:13px; color:var(--danger); }
+  .tabs { display:flex; gap:8px; margin-bottom:14px; }
+  .tabs button { margin-top:0; background:transparent; color:var(--muted); border:1px solid #334155; }
+  .tabs button.active { color:var(--accent); border-color:var(--accent); }
+  .panel { display:none; }
+  .panel.active { display:block; }
+  .logged { text-align:center; }
+  .admin { margin-top:18px; border-top:1px solid #334155; padding-top:14px; }
+  .user { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #2a3647; font-size:14px; }
+  .user .role { font-size:11px; color:var(--muted); margin-left:6px; }
+  .hint { font-size:12px; color:var(--muted); margin-top:6px; }
+</style>
+</head>
+<body>
+  <div class="card" id="app"><p class="sub">加载中…</p></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+async function api(path, opts) {
+  const r = await fetch(path, Object.assign({ headers: { "Content-Type": "application/json" } }, opts));
+  const d = await r.json().catch(() => ({}));
+  return { ok: r.ok, status: r.status, data: d };
+}
+
+function escapeHtml(s){ return (s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+async function boot() {
+  const cfg = await api("/api/config").catch(() => ({ ok: false }));
+  const me = await api("/api/user/me");
+  const app = $("app");
+  const c = cfg.ok ? cfg.data : { openRegistration: true, bootstrapping: false };
+  if (me.ok) return renderLoggedIn(app, me.data);
+  renderAuth(app, c);
+}
+
+function renderLoggedIn(app, me) {
+  app.innerHTML = `
+    <div class="logged">
+      <h1>👋 已登录</h1>
+      <p class="sub">当前用户：<b>${escapeHtml(me.username)}</b>（${me.role === "admin" ? "管理员" : "用户"}）</p>
+      <button onclick="enterSite()">进入站点</button>
+      <button class="ghost" onclick="logout()">退出登录</button>
+    </div>
+    ${me.role === "admin" ? '<div id="adminMount"></div>' : ""}
+  `;
+  if (me.role === "admin") loadAdmin();
+}
+function enterSite(){ location.href = "/"; }
+async function logout(){
+  await api("/api/user/logout", { method:"POST" });
+  location.href = "/auth/login.html";
+}
+
+function renderAuth(app, cfg) {
+  const showReg = cfg.openRegistration || cfg.bootstrapping; // 关闭注册时仍允许首位管理员引导
+  const sub = cfg.bootstrapping
+    ? "首次使用请注册账户，注册者将成为本站点管理员。"
+    : (cfg.openRegistration
+      ? "输入账户登录；没有账户可切换到「注册」创建。"
+      : "本站点已关闭开放注册，账户由管理员创建。请联系管理员获取账户。");
+  app.innerHTML = `
+    <h1>账户</h1>
+    <p class="sub">${sub}</p>
+    <div class="tabs">
+      <button id="tabLogin" class="active" onclick="switchTab('login')">登录</button>
+      ${showReg ? '<button id="tabReg" onclick="switchTab(\'reg\')">注册</button>' : ""}
+    </div>
+    <div id="panelLogin" class="panel active">
+      <label>用户名</label><input id="l_user" placeholder="用户名" />
+      <label>密码（若账户无密码可留空）</label><input id="l_pw" type="password" placeholder="密码" />
+      <button onclick="doLogin()">登录</button>
+    </div>
+    ${showReg ? `
+    <div id="panelReg" class="panel">
+      <label>用户名</label><input id="r_user" placeholder="用户名" />
+      <label>密码（可留空 = 无密码，仅凭用户名进入）</label><input id="r_pw" type="password" placeholder="留空则无密码" />
+      <button onclick="doRegister()">注册并进入</button>
+      <p class="hint">无密码账户：任何人知道用户名即可进入，请妥善保管用户名。</p>
+    </div>` : ""}
+    <div class="msg" id="msg"></div>
+  `;
+}
+function switchTab(t){
+  const panelReg = $("panelReg"), tabReg = $("tabReg");
+  $("panelLogin").classList.toggle("active", t==="login");
+  if (panelReg) panelReg.classList.toggle("active", t==="reg");
+  $("tabLogin").classList.toggle("active", t==="login");
+  if (tabReg) tabReg.classList.toggle("active", t==="reg");
+  $("msg").textContent = "";
+}
+async function doLogin(){
+  $("msg").textContent = "";
+  const r = await api("/api/user/login", { method:"POST", body: JSON.stringify({ username:$("l_user").value.trim(), password:$("l_pw").value }) });
+  if (r.ok) location.href = "/";
+  else $("msg").textContent = r.data.error || "登录失败";
+}
+async function doRegister(){
+  $("msg").textContent = "";
+  const r = await api("/api/user/register", { method:"POST", body: JSON.stringify({ username:$("r_user").value.trim(), password:$("r_pw").value }) });
+  if (r.ok) location.href = "/";
+  else $("msg").textContent = r.data.error || "注册失败";
+}
+
+async function loadAdmin(){
+  const mount = $("adminMount");
+  mount.innerHTML = `<div class="admin"><p class="sub">管理员：用户管理</p><div id="userList">加载中…</div>
+    <label>新建用户（仅管理员）</label>
+    <div class="row"><input id="n_user" placeholder="用户名"/><input id="n_pw" type="password" placeholder="密码(可空)"/></div>
+    <button onclick="createUser()">创建用户</button>
+    <div class="msg" id="adminMsg"></div></div>`;
+  const r = await api("/api/users");
+  if (!r.ok) { $("userList").textContent = "无权限或加载失败"; return; }
+  const list = r.data;
+  $("userList").innerHTML = list.map(u => `
+    <div class="user"><span>${escapeHtml(u.username)}<span class="role">${u.role==="admin"?"管理员":""}</span></span>
+    ${u.role==="admin" ? "" : `<button class="danger" style="margin:0;padding:6px 10px;font-size:12px" onclick="delUser('${u.id}')">删除</button>`}</div>
+  `).join("") || '<p class="sub">暂无其他用户</p>';
+}
+async function createUser(){
+  $("adminMsg").textContent = "";
+  const r = await api("/api/users", { method:"POST", body: JSON.stringify({ username:$("n_user").value.trim(), password:$("n_pw").value }) });
+  if (r.ok) { $("n_user").value=""; $("n_pw").value=""; loadAdmin(); }
+  else $("adminMsg").textContent = r.data.error || "创建失败";
+}
+async function delUser(id){
+  if (!confirm("确认删除该用户及其全部数据？此操作不可恢复。")) return;
+  const r = await api("/api/users/" + encodeURIComponent(id), { method:"DELETE" });
+  if (r.ok) loadAdmin(); else alert(r.data.error || "删除失败");
+}
+
+boot();
+</script>
+</body>
+</html>

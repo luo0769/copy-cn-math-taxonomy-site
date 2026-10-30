@@ -1,0 +1,45 @@
+# 自动同步上游仓库（需求6：自动关联 GitHub 项目并升级内容）
+# 触发：每天 UTC 04:00 自动跑一次，也可在 Actions 页面手动 "Run workflow"。
+# 作用：把 https://github.com/xiaoyang111222/cn-math-taxonomy 的最新内容合并进本仓库，
+#       推送后 Cloudflare Pages 的自动部署会重新发布（含最新项目内容 + 本仓库的认证层）。
+# 冲突策略：以本仓库（ours）为准保留认证层文件；上游对同名文件的改动会被 ours 覆盖。
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge upstream
+        run: |
+          git remote add upstream https://github.com/xiaoyang111222/cn-math-taxonomy.git
+          git fetch upstream
+          # 探测上游默认分支（main 或 master）
+          if git ls-remote --heads upstream main | grep -q 'main'; then
+            UP_BRANCH=main
+          else
+            UP_BRANCH=master
+          fi
+          echo "Upstream default branch: $UP_BRANCH"
+          git merge "upstream/$UP_BRANCH" --no-edit --strategy-option=ours || echo "merge had conflicts, kept ours"
+
+      - name: Push
+        run: git push origin HEAD
