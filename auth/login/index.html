@@ -132,10 +132,31 @@ async function loadAdmin(){
   const r = await api("/api/users");
   if (!r.ok) { $("userList").textContent = "无权限或加载失败"; return; }
   const list = r.data;
+  ADMIN_USERS = list;
   $("userList").innerHTML = list.map(u => `
     <div class="user"><span>${escapeHtml(u.username)}<span class="role">${u.role==="admin"?"管理员":""}</span></span>
-    ${u.role==="admin" ? "" : `<button class="danger" style="margin:0;padding:6px 10px;font-size:12px" onclick="delUser('${u.id}')">删除</button>`}</div>
+    <span style="display:flex;gap:6px">
+      <button style="margin:0;padding:6px 10px;font-size:12px" onclick="editUsername('${u.id}')">改名</button>
+      <button style="margin:0;padding:6px 10px;font-size:12px" onclick="editPassword('${u.id}')">改密</button>
+      ${u.role==="admin" ? "" : `<button class="danger" style="margin:0;padding:6px 10px;font-size:12px" onclick="delUser('${u.id}')">删除</button>`}
+    </span></div>
   `).join("") || '<p class="sub">暂无其他用户</p>';
+}
+let ADMIN_USERS = [];
+function adminFind(id){ return ADMIN_USERS.find(u => u.id === id); }
+async function editUsername(id){
+  const u = adminFind(id); if (!u) return;
+  const nu = prompt("新用户名：", u.username);
+  if (nu === null) return;
+  const r = await api("/api/users/" + encodeURIComponent(id), { method:"PATCH", body: JSON.stringify({ username: nu.trim() }) });
+  if (r.ok) loadAdmin(); else alert(r.data.error || "修改失败");
+}
+async function editPassword(id){
+  const pw = prompt("输入新密码（确定时留空 = 设为无密码，仅凭用户名登录）：");
+  if (pw === null) return;
+  if (pw === "" && !confirm("确认将该用户设为无密码账户？任何知道其用户名的人都能进入。")) return;
+  const r = await api("/api/users/" + encodeURIComponent(id), { method:"PATCH", body: JSON.stringify({ password: pw }) });
+  if (r.ok) alert("密码已更新"); else alert(r.data.error || "修改失败");
 }
 async function createUser(){
   $("adminMsg").textContent = "";

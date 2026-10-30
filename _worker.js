@@ -304,6 +304,26 @@ async function handleApi(request, env, path, method) {
     ).bind(id, username, password_hash, Date.now()).run();
     return json({ ok: true, id, username });
   }
+  if (p.startsWith("users/") && method === "PATCH") {
+    if (user.role !== "admin") return json({ error: "需要管理员权限" }, 403);
+    const id = decodeURIComponent(p.slice(6));
+    const target = await getUserById(env, id);
+    if (!target) return json({ error: "用户不存在" }, 404);
+    const body = await request.json().catch(() => ({}));
+    const username = typeof body.username === "string" ? body.username.trim() : target.username;
+    if (!username) return json({ error: "用户名不能为空" }, 400);
+    if (username !== target.username && (await getUserByUsername(env, username)))
+      return json({ error: "用户名已存在" }, 409);
+    let password_hash = target.password_hash;
+    if (typeof body.password === "string") {
+      if (body.password && body.password.length < 4)
+        return json({ error: "密码至少 4 位（或传空串表示无密码）" }, 400);
+      password_hash = body.password ? await hashPassword(body.password) : null;
+    }
+    await env.DB.prepare("UPDATE users SET username = ?, password_hash = ? WHERE id = ?")
+      .bind(username, password_hash, id).run();
+    return json({ ok: true, username, hasPassword: !!password_hash });
+  }
   if (p.startsWith("users/") && method === "DELETE") {
     if (user.role !== "admin") return json({ error: "需要管理员权限" }, 403);
     const id = decodeURIComponent(p.slice(6));
