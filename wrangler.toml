@@ -9,11 +9,14 @@ pages_build_output_dir = "."
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
-[[d1_databases]]
-binding = "DB"
-database_name = "cn-math-taxonomy-db"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
-migrations_dir = "migrations"
+# D1 绑定在 Cloudflare Pages 控制台设置：Settings → Functions/Bindings → D1 database bindings
+# 变量名 DB，选择你的数据库（数据库 ID 见 D1 控制台，无需写在本文件）
+# 本地开发可用 wrangler pages dev . --binding DB=... （或临时恢复 [[d1_databases]] 段）
+# migrations_dir = "migrations"
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "cn-math-taxonomy-db"
+# database_id = "在 Pages 里不需要；本地开发才填"
 
 # 本地开发需设置的环境变量（生产请在 Cloudflare Pages 控制台设置，勿提交真实密值）
 # [vars]
