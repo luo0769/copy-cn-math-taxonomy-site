@@ -69,7 +69,7 @@ function renderLoggedIn(app, me) {
 function enterSite(){ location.href = "/"; }
 async function logout(){
   await api("/api/user/logout", { method:"POST" });
-  location.href = "/auth/login.html";
+  location.href = "/auth/login/";
 }
 
 function renderAuth(app, cfg) {

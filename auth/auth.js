@@ -18,13 +18,13 @@
     bar.appendChild(el("span", null, "👤 " + me.username));
     if (me.role === "admin") {
       const a = el("a", null, "管理");
-      a.href = "/auth/login.html";
+      a.href = "/auth/login/";
       a.style.color = "#38bdf8";
       a.style.textDecoration = "none";
       bar.appendChild(a);
     }
     const out = el("a", null, "退出");
-    out.href = "/auth/login.html";
+    out.href = "/auth/login/";
     out.style.color = "#94a3b8";
     out.style.textDecoration = "none";
     bar.appendChild(out);

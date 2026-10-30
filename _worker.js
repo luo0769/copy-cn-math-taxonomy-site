@@ -328,10 +328,10 @@ export default {
     }
 
     const siteAuth = await getSiteAuth(request, env);
-    if (!siteAuth) return serveFile(request, env, "/auth/gate.html");
+    if (!siteAuth) return serveFile(request, env, "/auth/gate/");
 
     const user = await getUserAuth(request, env);
-    if (!user) return serveFile(request, env, "/auth/login.html");
+    if (!user) return serveFile(request, env, "/auth/login/");
 
     // 已完全认证：提供原始静态资源
     return serveAsset(request, env);
